@@ -1,16 +1,49 @@
 """
-This module contains the http frontend server for Parallax.
-Two classes that handles a post request from the frontend service:
+Parallax HTTP前端服务器模块
 
-  -- ParallaxHttpServer:
-    The uvicorn server that communicates with the frontend and posts responses
-    to users.
-    This module launches a subprocess.
+该模块实现了 Parallax 分布式AI推理系统的HTTP前端服务器，为外部客户端
+提供标准的RESTful API接口。模块包含两个核心类：
 
-  -- HTTPHandler:
-    1.Gets requests from ParallaxHttpServer and maintains status of these requests.
-    2.Send raw requests by ipc to parallax executor.
-    3.Waits for ipc response from the executor and stores the results.
+-- ParallaxHttpServer:
+   基于Uvicorn的HTTP服务器，负责与前端服务通信并向用户返回响应。
+   该服务器以独立子进程的方式运行，确保与推理引擎的隔离性。
+
+   主要功能：
+   * 接收来自客户端的HTTP推理请求
+   * 提供标准的OpenAI兼容API接口
+   * 处理请求验证和格式转换
+   * 返回推理结果给客户端
+
+-- HTTPHandler:
+   HTTP请求处理器，作为前端服务器和后端执行器之间的桥梁。
+
+   处理流程：
+   1. 从ParallaxHttpServer接收请求并维护请求状态
+   2. 通过IPC（进程间通信）将原始请求发送给parallax执行器
+   3. 等待执行器的IPC响应并存储结果
+   4. 将结果格式化后返回给HTTP服务器
+
+技术特性：
+- 异步处理：基于asyncio实现高性能并发处理
+- 进程隔离：前后端分离，提高系统稳定性
+- 标准兼容：支持OpenAI API格式，便于集成
+- 状态管理：完整的请求生命周期跟踪
+
+API端点：
+- POST /v1/chat/completions: 聊天补全接口
+- POST /v1/completions: 文本补全接口
+- GET /v1/models: 模型信息查询接口
+- GET /health: 健康检查接口
+
+使用示例：
+    # 启动HTTP服务器
+    server = ParallaxHttpServer(host="0.0.0.0", port=3000)
+    server.start()
+
+    # 客户端调用
+    import requests
+    response = requests.post("http://localhost:3000/v1/chat/completions",
+                           json={"model": "qwen", "messages": [{"role": "user", "content": "Hello"}]})
 """
 
 import asyncio

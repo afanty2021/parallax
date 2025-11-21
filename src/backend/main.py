@@ -1,3 +1,24 @@
+"""
+Parallax 后端 API 服务主程序
+
+该模块实现了 Parallax 分布式AI推理系统的后端API服务，提供：
+1. RESTful API 接口，用于管理和控制分布式推理集群
+2. 静态文件服务，支持前端界面访问
+3. WebSocket 实时通信，用于实时状态更新和监控
+4. 调度器管理接口，负责集群的动态调度和负载均衡
+5. 请求处理接口，处理推理请求和结果返回
+
+主要功能：
+- 集群状态查询和管理
+- 节点加入和退出
+- 模型加载和卸载
+- 推理请求处理
+- 性能监控和统计
+
+使用方式：
+    python -m backend.main --port 8000 --model-path /path/to/model
+"""
+
 import asyncio
 import json
 import time
@@ -22,19 +43,25 @@ from parallax_utils.file_util import get_project_root
 from parallax_utils.logging_config import get_logger, set_log_level
 from parallax_utils.version_check import check_latest_release
 
+# 创建 FastAPI 应用实例，这是后端服务的核心
 app = FastAPI()
 
+# 添加 CORS 中间件，允许跨域请求，支持前端应用访问
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=["*"],  # 允许所有来源，生产环境应该限制具体域名
+    allow_credentials=True,  # 允许携带认证信息
+    allow_methods=["*"],  # 允许所有HTTP方法
+    allow_headers=["*"],  # 允许所有请求头
 )
 
+# 获取当前模块的日志记录器
 logger = get_logger(__name__)
 
+# 全局变量：调度管理器实例，负责管理集群的调度策略和节点分配
 scheduler_manage = None
+
+# 全局变量：请求处理器实例，负责处理具体的推理请求
 request_handler = RequestHandler()
 
 

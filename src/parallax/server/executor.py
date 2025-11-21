@@ -1,20 +1,50 @@
 """
-High-level executor for managing model shards, scheduler, and cache pool on each Peer.
+Parallax 分布式推理执行器
 
-Executor handles
-1. Loading model shards from the repository;
-2. Instantiate scheduler, kv cache manager;
-3. Handles tokenization / detokenization if needed;
-4. Keep listening to RPC to get requests, feed these to scheduler's request pool;
-5. Get batched requests from the scheduler,
-    - prepare the MLX tensor input
-    - rebuild KV cache
-    - feed to model runner;
-    For now we process prefill and decode requests separately.
-    Later when we have Ragged Paged Flash Attention kernel, we can process both in one batch.
-6. Run model forward, our model will returned updated caches,
-    kv cache manager will handle updating caches per layer;
-7. Get the hidden-states from the model execution.
+该模块是每个 Peer 节点上的高级执行器，负责管理模型分片、调度器和缓存池。
+Executor 是 Parallax 分布式推理系统的核心组件，处理模型的实际推理执行。
+
+主要职责和功能：
+
+1. **模型分片加载**：从模型仓库加载并初始化分配给当前节点的模型层
+2. **组件实例化**：创建并初始化调度器、KV缓存管理器等核心组件
+3. **文本处理**：处理输入的tokenization（分词）和输出的detokenization（反分词）
+4. **RPC监听**：持续监听P2P网络中的RPC请求，将其加入到调度器的请求池
+5. **批处理执行**：从调度器获取批处理请求并执行：
+   - 准备MLX张量输入数据
+   - 重建和更新KV缓存
+   - 将数据输入到模型运行器
+   - 注意：目前prefill（填充）和decode（解码）请求分开处理
+   - 未来计划使用Ragged Paged Flash Attention内核统一处理
+6. **模型前向传播**：运行模型前向传播，获取更新后的缓存状态
+7. **缓存管理**：KV缓存管理器处理每层的缓存更新
+8. **状态输出**：获取模型执行的隐藏状态，传递给下一级节点
+
+技术特性：
+- 支持MLX（Apple Silicon）和PyTorch（GPU）双后端
+- 实现高效的KV缓存管理和复用
+- 提供动态批处理和连续推理
+- 支持多种采样策略和参数配置
+
+架构设计：
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   RPC Listener  │───▶│  Request Pool   │───▶│  Batch Builder  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                                        │
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  Cache Manager  │◀───│ Model Forward   │◀───│  Input Prepare  │
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+                                │
+                       ┌─────────────────┐
+                       │ Hidden States   │
+                       └─────────────────┘
+```
+
+使用示例：
+    executor = Executor(model_path, start_layer=0, end_layer=12)
+    executor.start()
+    # executor 将自动处理推理请求
 """
 
 import argparse

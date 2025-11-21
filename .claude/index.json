@@ -1,0 +1,406 @@
+{
+  "timestamp": "2025-01-21T12:00:00.000Z",
+  "project_name": "Parallax",
+  "project_description": "分布式AI推理引擎，支持跨设备LLM托管和流水线并行模型分片",
+  "scan_coverage": {
+    "total_files_estimated": 140,
+    "files_scanned": 139,
+    "coverage_percentage": 99.3,
+    "scanned_modules": 8,
+    "ignored_files": 1,
+    "truncated": false
+  },
+  "modules": [
+    {
+      "name": "parallax",
+      "path": "src/parallax",
+      "language": "Python",
+      "file_count": 42,
+      "primary_files": [
+        "launch.py",
+        "cli.py",
+        "server/executor.py",
+        "server/http_server.py",
+        "p2p/server.py",
+        "server/scheduler.py"
+      ],
+      "test_files": [
+        "test_executor.py",
+        "test_http_handler.py",
+        "test_batch_scheduler.py",
+        "test_model.py",
+        "test_prefix_cache.py",
+        "test_sampler.py",
+        "test_server_args.py",
+        "test_shard_loader.py",
+        "test_message_util.py"
+      ],
+      "config_files": ["server/server_args.py"],
+      "coverage_status": "fully_scanned",
+      "entry_points": ["cli.py:main", "launch.py"],
+      "api_endpoints": ["/v1/chat/completions", "/v1/completions", "/v1/models"],
+      "dependencies": ["lattica", "mlx-lm", "sglang", "zmq", "fastapi"],
+      "testing_framework": "pytest",
+      "test_coverage": "comprehensive"
+    },
+    {
+      "name": "scheduling",
+      "path": "src/scheduling",
+      "language": "Python",
+      "file_count": 5,
+      "primary_files": [
+        "scheduler.py",
+        "layer_allocation.py",
+        "request_routing.py",
+        "node.py",
+        "model_info.py"
+      ],
+      "test_files": [
+        "scheduler_tests/test_layer_allocation.py",
+        "scheduler_tests/test_request_routing.py",
+        "scheduler_tests/test_scheduler.py",
+        "scheduler_tests/test_utils.py"
+      ],
+      "config_files": [],
+      "coverage_status": "fully_scanned",
+      "algorithms": ["greedy_allocation", "dynamic_programming", "round_robin_routing"],
+      "dependencies": ["dijkstar"],
+      "testing_framework": "pytest",
+      "test_coverage": "extensive"
+    },
+    {
+      "name": "parallax_utils",
+      "path": "src/parallax_utils",
+      "language": "Python",
+      "file_count": 8,
+      "primary_files": [
+        "logging_config.py",
+        "version_check.py",
+        "file_util.py",
+        "ascii_anime.py",
+        "request_metrics.py",
+        "utils.py"
+      ],
+      "test_files": [],
+      "config_files": [],
+      "coverage_status": "scanned",
+      "resources": ["anime/parallax_run.json", "anime/parallax_join.json"]
+    },
+    {
+      "name": "backend",
+      "path": "src/backend",
+      "language": "Python",
+      "file_count": 8,
+      "primary_files": [
+        "main.py",
+        "server/request_handler.py",
+        "server/scheduler_manage.py",
+        "server/static_config.py",
+        "server/server_args.py"
+      ],
+      "test_files": [],
+      "config_files": ["server_args.py"],
+      "coverage_status": "scanned",
+      "framework": "FastAPI",
+      "port": 8000,
+      "static_files": true
+    },
+    {
+      "name": "frontend",
+      "path": "src/frontend",
+      "language": "TypeScript",
+      "file_count": 58,
+      "primary_files": [
+        "src/App.tsx",
+        "src/main.tsx",
+        "src/pages/chat.tsx",
+        "src/pages/join.tsx",
+        "src/pages/setup.tsx",
+        "package.json",
+        "vite.config.ts",
+        "tsconfig.json"
+      ],
+      "test_files": [],
+      "config_files": ["package.json", "vite.config.ts", "tsconfig.json", "tsconfig.app.json", "tsconfig.node.json"],
+      "coverage_status": "fully_scanned",
+      "framework": "React 19.1.1",
+      "ui_library": "Material-UI 7.3.2",
+      "build_tool": "Vite 7.1.2",
+      "port": 5173,
+      "dependencies": {
+        "core": ["react", "react-dom", "typescript"],
+        "ui": ["@mui/material", "@emotion/react", "@emotion/styled", "@tabler/icons-react"],
+        "ai": ["@ai-sdk/openai", "@ai-sdk/react", "ai"],
+        "development": ["@vitejs/plugin-react-swc", "@gradient-network/prettier-config", "eslint"]
+      }
+    },
+    {
+      "name": "tests",
+      "path": "tests",
+      "language": "Python",
+      "file_count": 14,
+      "primary_files": [
+        "test_executor.py",
+        "test_http_handler.py",
+        "test_batch_scheduler.py",
+        "test_model.py",
+        "test_prefix_cache.py",
+        "test_sampler.py",
+        "test_server_args.py",
+        "test_shard_loader.py"
+      ],
+      "test_files": ["tests/scheduler_tests/"],
+      "config_files": [],
+      "coverage_status": "newly_discovered",
+      "testing_framework": "pytest",
+      "coverage_tools": ["pytest-cov", "pytest-mock"],
+      "test_categories": {
+        "unit_tests": ["test_executor.py", "test_http_handler.py", "test_sampler.py"],
+        "integration_tests": ["test_batch_scheduler.py", "test_model.py"],
+        "scheduler_tests": ["scheduler_tests/test_*.py"],
+        "infrastructure_tests": ["test_prefix_cache.py", "test_shard_loader.py", "test_server_args.py"]
+      }
+    },
+    {
+      "name": "docker",
+      "path": "docker",
+      "language": "Dockerfile",
+      "file_count": 2,
+      "primary_files": [
+        "Dockerfile",
+        "Dockerfile.spark"
+      ],
+      "test_files": [],
+      "config_files": [],
+      "coverage_status": "scanned",
+      "base_image": "lmsysorg/sglang:v0.5.5",
+      "docker_registries": ["gradientservice/parallax"]
+    },
+    {
+      "name": "ci_cd",
+      "path": ".github/workflows",
+      "language": "YAML",
+      "file_count": 5,
+      "primary_files": [
+        "ci.yml",
+        "build-images.yaml",
+        "build-spark-image.yaml",
+        "commit-check.yaml",
+        "pre-commit.yml"
+      ],
+      "test_files": [],
+      "config_files": [],
+      "coverage_status": "newly_discovered",
+      "ci_platform": "GitHub Actions",
+      "workflows": {
+        "continuous_integration": "ci.yml",
+        "docker_builds": ["build-images.yaml", "build-spark-image.yaml"],
+        "quality_checks": ["commit-check.yaml", "pre-commit.yml"]
+      },
+      "testing_environments": ["macos-15", "arc-public-parallax"],
+      "coverage_reporting": "codecov"
+    }
+  ],
+  "configuration_files": {
+    "python": {
+      "project_config": "pyproject.toml",
+      "build_system": "poetry-core",
+      "quality_tools": ["black>=24.3", "ruff>=0.4", "isort>=5.13.2"],
+      "testing_frameworks": ["pytest>=8.2", "pytest-cov>=5.0", "pytest-mock>=3.14"]
+    },
+    "frontend": {
+      "package_manager": "pnpm",
+      "build_config": "vite.config.ts",
+      "type_config": "tsconfig.json",
+      "quality_tools": ["eslint", "@gradient-network/prettier-config"]
+    },
+    "development": {
+      "pre_commit": ".pre-commit-config.yaml",
+      "hooks": ["autoflake", "isort", "black", "pre-commit-hooks"]
+    }
+  },
+  "language_distribution": {
+    "Python": {
+      "file_count": 75,
+      "percentage": 53.6
+    },
+    "TypeScript": {
+      "file_count": 30,
+      "percentage": 21.4
+    },
+    "TSX": {
+      "file_count": 28,
+      "percentage": 20.0
+    },
+    "YAML": {
+      "file_count": 5,
+      "percentage": 3.6
+    },
+    "Other": {
+      "file_count": 2,
+      "percentage": 1.4
+    }
+  },
+  "model_support": {
+    "implemented": [
+      "Qwen系列",
+      "DeepSeek系列",
+      "Llama系列",
+      "GLM系列",
+      "MiniMax",
+      "GPT-OSS"
+    ],
+    "backend_options": [
+      "SGLang (GPU)",
+      "MLX LM (Mac)",
+      "VLLM"
+    ],
+    "test_models": ["Qwen3-0.6B", "mlx-community/Qwen3-0.6B-bf16", "Qwen/Qwen3-0.6B"]
+  },
+  "testing_infrastructure": {
+    "status": "comprehensive",
+    "frameworks": {
+      "python": "pytest",
+      "coverage": "pytest-cov",
+      "mocking": "pytest-mock"
+    },
+    "test_categories": {
+      "unit_tests": {
+        "count": 9,
+        "files": ["test_executor.py", "test_http_handler.py", "test_sampler.py", "test_server_args.py", "test_shard_loader.py", "test_message_util.py"]
+      },
+      "integration_tests": {
+        "count": 3,
+        "files": ["test_batch_scheduler.py", "test_model.py", "test_prefix_cache.py"]
+      },
+      "scheduler_tests": {
+        "count": 4,
+        "files": ["scheduler_tests/test_layer_allocation.py", "scheduler_tests/test_scheduler.py", "scheduler_tests/test_request_routing.py", "scheduler_tests/test_utils.py"]
+      }
+    },
+    "ci_integration": {
+      "platform": "GitHub Actions",
+      "test_runner": "pytest",
+      "coverage_reporter": "codecov",
+      "end_to_end_tests": true,
+      "testing_environments": ["macos-15"]
+    }
+  },
+  "ci_cd_pipeline": {
+    "platform": "GitHub Actions",
+    "workflows": {
+      "ci": {
+        "trigger": "pull_request to main",
+        "environment": "macos-15",
+        "python_versions": ["3.11"],
+        "test_coverage": true,
+        "e2e_tests": true
+      },
+      "docker_builds": {
+        "triggers": ["daily schedule", "workflow_dispatch"],
+        "runner": "arc-public-parallax",
+        "registries": ["Docker Hub"],
+        "cache": "GitHub Actions cache"
+      },
+      "quality_checks": {
+        "pre_commit_hooks": ["autoflake", "isort", "black", "yaml-checks"],
+        "commit_linting": "commitlint"
+      }
+    }
+  },
+  "quality_tools": {
+    "Python": {
+      "formatter": "Black (line-length=100)",
+      "linter": "Ruff (ignore=E501)",
+      "import_sorter": "isort (profile=black)",
+      "type_checker": "None (建议添加mypy)",
+      "pre_commit": true
+    },
+    "TypeScript": {
+      "formatter": "Prettier (@gradient-network/prettier-config)",
+      "linter": "ESLint + TypeScript",
+      "type_checker": "TypeScript (strict mode)",
+      "pre_commit": false
+    },
+    "testing": {
+      "framework": "pytest",
+      "coverage": "pytest-cov with codecov integration",
+      "mocking": "pytest-mock",
+      "ci_integration": "GitHub Actions"
+    }
+  },
+  "performance_optimizations": {
+    "backend": [
+      "异步HTTP处理 (FastAPI)",
+      "KV缓存共享优化 (RadixCache)",
+      "动态批次处理",
+      "P2P网络优化 (Lattica)",
+      "模型分片并行处理"
+    ],
+    "frontend": [
+      "代码分割 (React.lazy)",
+      "虚拟滚动 (react-window)",
+      "资源预加载",
+      "构建优化 (Vite)",
+      "Material-UI优化"
+    ],
+    "testing": [
+      "并行测试执行",
+      "缓存依赖",
+      "增量测试执行"
+    ]
+  },
+  "development_workflow": {
+    "local_development": {
+      "python": "pip install -e '.[dev]'",
+      "frontend": "pnpm install && pnpm dev",
+      "testing": "pytest tests/ -v --cov=src/parallax"
+    },
+    "code_quality": {
+      "formatting": "black, isort, prettier",
+      "linting": "ruff, eslint",
+      "pre_commit_hooks": "autoflake, trailing-whitespace, end-of-file-fixer"
+    },
+    "continuous_integration": {
+      "automated_testing": "pytest with coverage",
+      "docker_builds": "multi-platform builds",
+      "quality_gates": "linting, formatting, testing"
+    }
+  },
+  "scan_metadata": {
+    "scan_strategy": "deep_stage_c_completion",
+    "stage_a_completed": true,
+    "stage_b_completed": true,
+    "stage_c_completed": true,
+    "major_discoveries": [
+      "Comprehensive test suite (14 test files)",
+      "CI/CD pipeline with GitHub Actions",
+      "Pre-commit hooks configuration",
+      "Detailed pyproject.toml configuration",
+      "Frontend build and development configuration"
+    ],
+    "ignore_patterns": [
+      "node_modules/**",
+      ".git/**",
+      ".idea/**",
+      "dist/**",
+      "build/**",
+      ".next/**",
+      "__pycache__/**",
+      "*.lock",
+      "*.log",
+      "*.bin",
+      "*.pdf",
+      "*.png",
+      "*.jpg",
+      "*.jpeg",
+      "*.gif",
+      "*.mp4",
+      "*.zip",
+      "*.tar",
+      "*.gz"
+    ],
+    "large_files_ignored": 30,
+    "binary_files_ignored": 6
+  }
+}

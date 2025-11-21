@@ -1,9 +1,20 @@
 """
-CLI argument parser for Parallax server.
+Parallax 服务器命令行参数解析器
 
-This module provides argument parsing functionality for the Parallax executor,
-supporting various configuration options for model loading, layer sharding,
-and performance tuning.
+该模块为 Parallax 分布式推理执行器提供命令行参数解析功能，
+支持各种配置选项，包括模型加载、层分片和性能调优等。
+
+主要功能：
+1. 解析HTTP服务器配置参数
+2. 解析P2P网络(Lattica)配置参数
+3. 解析模型配置参数
+4. 解析KV缓存配置参数
+5. 解析调度器配置参数
+6. 解析GPU/SGLang专用配置参数
+7. 参数有效性验证
+
+使用示例：
+    python -m parallax.launch_chat --model-path Qwen/Qwen3-0.6B --port 3000 --max-batch-size 16
 """
 
 import argparse
@@ -15,98 +26,148 @@ logger = get_logger(__name__)
 
 def parse_args() -> argparse.Namespace:
     """
-    Parse command line arguments for the Parallax executor.
+    解析 Parallax 执行器的命令行参数
+
+    该函数定义并解析所有支持命令行参数，包括：
+    - HTTP服务器配置：主机地址、端口等
+    - P2P网络配置：初始节点、中继服务器等
+    - 模型配置：模型路径、数据类型、层分配等
+    - 缓存配置：KV缓存内存分配、块大小等
+    - 调度配置：批处理大小、超时设置等
+    - GPU后端配置：注意力计算、MoE运行器等
 
     Returns:
-        Parsed arguments namespace
+        argparse.Namespace: 包含所有解析后参数的命名空间对象
     """
     parser = argparse.ArgumentParser(
         description="Parallax Executor - Distributed LLM Inference",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
 
-    # HTTP server configuration
-    parser.add_argument("--host", type=str, default="localhost", help="Host of the HTTP server.")
-    parser.add_argument("--port", type=int, default=3000, help="Port of the HTTP server")
+    # ===== HTTP 服务器配置 =====
+    # HTTP服务器监听的主机地址，默认为localhost（仅本地访问）
+    parser.add_argument("--host", type=str, default="localhost", help="HTTP服务器的主机地址")
+
+    # HTTP服务器监听的端口号，默认3000
+    parser.add_argument("--port", type=int, default=3000, help="HTTP服务器的端口号")
+
+    # 节点聊天HTTP服务器的专用端口，默认3002，用于处理聊天推理请求
     parser.add_argument(
-        "--node-chat-port", type=int, default=3002, help="Port of the node chat HTTP server"
+        "--node-chat-port", type=int, default=3002, help="节点聊天HTTP服务器的端口号"
     )
 
-    # Lattica configuration
-    parser.add_argument("--initial-peers", nargs="+", default=[], help="List of initial DHT peers")
-    parser.add_argument("--scheduler-addr", type=str, default=None, help="Scheduler address")
-    parser.add_argument("--relay-servers", nargs="+", default=[], help="List of relay DHT peers")
-    parser.add_argument("--tcp-port", type=int, default=0, help="Port for Lattica TCP listening")
-    parser.add_argument("--udp-port", type=int, default=0, help="Port for Lattica UDP listening")
+    # ===== Lattica P2P 网络配置 =====
+    # DHT（分布式哈希表）的初始节点列表，用于加入P2P网络
+    parser.add_argument("--initial-peers", nargs="+", default=[], help="DHT初始节点地址列表")
+
+    # 调度器节点的网络地址，用于连接到集群调度器
+    parser.add_argument("--scheduler-addr", type=str, default=None, help="调度器节点的网络地址")
+
+    # 中继服务器节点列表，用于网络拓扑中转和连接优化
+    parser.add_argument("--relay-servers", nargs="+", default=[], help="中继DHT节点地址列表")
+
+    # Lattica P2P网络的TCP监听端口，0表示自动分配
+    parser.add_argument("--tcp-port", type=int, default=0, help="Lattica TCP监听端口（0为自动分配）")
+
+    # Lattica P2P网络的UDP监听端口，0表示自动分配
+    parser.add_argument("--udp-port", type=int, default=0, help="Lattica UDP监听端口（0为自动分配）")
+
+    # 需要向网络宣告的多地址列表，用于其他节点发现和连接此节点
     parser.add_argument(
-        "--announce-maddrs", nargs="+", default=[], help="List of multiaddresses to announce"
-    )
-    parser.add_argument("--dht-prefix", type=str, default="gradient", help="Prefix for DHT keys")
-    parser.add_argument(
-        "--notify-url", type=str, default=None, help="URL to notify when a request is finished"
+        "--announce-maddrs", nargs="+", default=[], help="向P2P网络宣告的多地址列表"
     )
 
-    # Model configuration
+    # DHT键的前缀，用于区分不同的应用或网络，默认为"gradient"
+    parser.add_argument("--dht-prefix", type=str, default="gradient", help="DHT键的前缀标识")
+
+    # 请求完成时的通知URL，用于回调机制和外部系统集成
+    parser.add_argument(
+        "--notify-url", type=str, default=None, help="请求完成时的回调通知URL"
+    )
+
+    # ===== 模型配置 =====
+    # 模型仓库路径或模型名称，支持HuggingFace模型ID
+    # 例如：'mlx-community/Qwen3-0.6B-bf16' 或 '/path/to/local/model'
     parser.add_argument(
         "--model-path",
         type=str,
         default=None,
-        help="Path to the model repository or model name (e.g., 'mlx-community/Qwen3-0.6B-bf16')",
+        help="模型仓库路径或模型名称（如：'mlx-community/Qwen3-0.6B-bf16'）",
     )
+
+    # 模型支持的最大序列长度，决定能处理的最大输入+输出token数量
+    # None表示使用模型默认值
     parser.add_argument(
         "--max-sequence-length",
         type=int,
         default=None,
-        help="Maximum sequence length for the model",
+        help="模型支持的最大序列长度",
     )
 
+    # GPU内存中用于存储模型参数的比例，默认65%
+    # 剩余内存将用于KV缓存和其他计算
     parser.add_argument(
         "--param-mem-ratio",
         type=float,
         default=0.65,
-        help="Ratio of GPU memory to use for parameter hosting",
+        help="用于存储模型参数的GPU内存比例（默认0.65）",
     )
 
+    # GPU内存中用于KV缓存的比例，默认25%
+    # 影响能同时处理的请求数量和上下文长度
     parser.add_argument(
         "--kvcache-mem-ratio",
         type=float,
         default=0.25,
-        help="Ratio of GPU memory to use for KV cache",
+        help="用于KV缓存的GPU内存比例（默认0.25）",
     )
 
+    # 当前节点负责的模型层起始索引（包含）
+    # 用于模型分片，None表示自动分配
     parser.add_argument(
         "--start-layer",
         type=int,
         default=None,
-        help="Starting layer index for this shard (inclusive)",
+        help="当前分片负责的起始层索引（包含）",
     )
 
+    # 当前节点负责的模型层结束索引（不包含）
+    # 用于模型分片，None表示自动分配
     parser.add_argument(
-        "--end-layer", type=int, default=None, help="Ending layer index for this shard (exclusive)"
+        "--end-layer", type=int, default=None, help="当前分片负责的结束层索引（不包含）"
     )
 
+    # 模型权重和计算的数据类型，影响内存占用和计算精度
+    # bfloat16: 平衡精度和内存，推荐选择
+    # float16: 更省内存，可能影响精度
+    # float32: 最高精度，占用内存最多
     parser.add_argument(
         "--dtype",
         type=str,
         default="bfloat16",
         choices=["float16", "bfloat16", "float32"],
-        help="Data type for model weights and computations",
+        help="模型权重和计算的数据类型",
     )
 
-    # KV Cache configuration
+    # ===== KV 缓存配置 =====
+    # 可用内存中用于KV缓存的分数（0.0到1.0）
+    # 较高的值支持更多并发请求和更长上下文，但可能导致OOM
     parser.add_argument(
         "--kv-cache-memory-fraction",
         type=float,
         default=0.8,
-        help="Fraction of available memory to use for KV cache (0.0 to 1.0)",
+        help="用于KV缓存的可用内存分数（0.0到1.0）",
     )
 
+    # KV缓存管理的块大小，影响内存分配效率
+    # 较大的块减少内存碎片，较小的块提高内存利用率
     parser.add_argument(
-        "--kv-block-size", type=int, default=64, help="Block size for KV cache management"
+        "--kv-block-size", type=int, default=64, help="KV缓存管理的块大小"
     )
 
+    # 启用前缀缓存复用，可以显著提高重复前缀请求的推理速度
     parser.add_argument(
-        "--enable-prefix-cache", action="store_true", help="Enable prefix cache reuse"
+        "--enable-prefix-cache", action="store_true", help="启用前缀缓存复用"
     )
 
     # Scheduler configuration

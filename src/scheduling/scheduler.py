@@ -1,5 +1,21 @@
 """
-Scheduler for Layer Allocation and Request Routing.
+Parallax 分布式推理调度器
+
+该模块实现了Parallax分布式AI推理系统的核心调度算法，负责：
+1. 层分配（Layer Allocation）：将模型层智能分配到不同的计算节点
+2. 节点实例化（Node Materialization）：管理和维护集群中的计算节点
+3. 请求路由（Request Routing）：将推理请求智能路由到最优节点链
+
+主要特性：
+- 支持贪心算法和动态规划两种层分配策略
+- 支持轮询和动态规划两种请求路由策略
+- 实现动态负载均衡和故障恢复
+- 提供实时的性能监控和统计信息
+
+使用示例：
+    scheduler = Scheduler(model_info, nodes, strategy="dp", routing_strategy="rr")
+    allocation = scheduler.allocate_layers()
+    request_routes = scheduler.route_request(request_data)
 """
 
 from __future__ import annotations
@@ -26,7 +42,19 @@ logger = get_logger(__name__)
 
 
 class Scheduler:
-    """Coordinates allocation, node materialization, and request routing."""
+    """
+    分布式推理调度器主类
+
+    协调层分配、节点实例化和请求路由三大核心功能。该类是Parallax系统的
+    大脑，负责智能地管理计算资源和优化推理性能。
+
+    主要职责：
+    1. 根据节点能力和模型特性进行层分配
+    2. 管理节点的生命周期和健康状态
+    3. 为每个推理请求计算最优的执行路径
+    4. 监控系统性能并动态调整配置
+    5. 处理节点故障和负载均衡
+    """
 
     def __init__(
         self,
@@ -42,12 +70,25 @@ class Scheduler:
         request_warm_up_for_reshard: int = 0,
         heartbeat_timeout: float = 60.0,
     ) -> None:
-        """Initialize the scheduler.
+        """
+        初始化分布式推理调度器
 
         Args:
-            model_info: Model architecture information used by allocators and routers.
-            nodes: Initial list of candidate nodes.
-            min_nodes_bootstrapping: Minimum nodes required to attempt initial allocation.
+            model_info (ModelInfo): 模型架构信息，包含层数、每层大小等，
+                                  用于分配器和路由器的决策
+            nodes (List[Node]): 候选节点列表，包含每个节点的计算能力和资源状况
+            min_nodes_bootstrapping (int): 初始分配所需的最小节点数，默认为1
+            strategy (Literal["greedy", "dp"]): 层分配策略
+                - "greedy": 贪心算法，快速但可能不是最优
+                - "dp": 动态规划，较慢但更优，默认选择
+            routing_strategy (Literal["rr", "dp"]): 请求路由策略
+                - "rr": 轮询路由，简单负载均衡，默认选择
+                - "dp": 动态规划路由，基于性能优化
+            request_arrival_horizon_sec (float): 请求到达时间预测范围，秒，默认600秒
+            rebalance_threshold (float): 负载重平衡阈值，默认无穷大（不重平衡）
+            water_filling_max_iterations (int): 水填充算法最大迭代次数，默认40
+            request_warm_up_for_reshard (int): 重新分片前的请求预热数量，默认0
+            heartbeat_timeout (float): 心跳超时时间，秒，默认60秒
             strategy: Layer allocation strategy ("dp" or "greedy").
             routing_strategy: Request routing strategy ("dp" for dynamic programming, or
                 "greedy" for round-robin over complete pipelines skipping overloaded ones).
